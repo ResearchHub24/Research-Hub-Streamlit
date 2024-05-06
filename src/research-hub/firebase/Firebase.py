@@ -40,10 +40,11 @@ class Firebase:
             raise LoginException('Invalid Password')
 
     def get_tags(self):
-        if st.session_state[States.User.name] is None:
-            raise LoginException('Please login to continue')
-
+        # if st.session_state[States.User.name] is None:
+        #     raise LoginException('Please login to continue')
         tags = str(self.ref.get())
+        if not tags or tags == 'None':
+            return []
         return self.tagsToList(tags.replace('\'', '\"'))
 
     def add_tag(self, tag: TagModel):
@@ -51,9 +52,9 @@ class Firebase:
             raise LoginException('Please login to continue')
         uid = st.session_state[States.User.name].uid
         tag.created_by = uid
-        if self.ref.child(tag.name).get():
+        if self.ref.child(tag.name.upper()).get():
             raise TagException('Tag already exists')
-        self.ref.child(tag.name).set(tag.__dict__)
+        self.ref.child(tag.name.upper()).set(tag.__dict__)
 
     @staticmethod
     def tagsToList(tags_json) -> List[TagModel]:
@@ -63,5 +64,7 @@ class Firebase:
 
 def test():
     firebase = Firebase(json_data)
-    firebase.add_tag(TagModel(name='Google'))
+    # firebase.add_tag(TagModel(name='Google'))
     print(firebase.get_tags())
+
+test()

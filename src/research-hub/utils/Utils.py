@@ -7,6 +7,7 @@ class States(Enum):
     Screen = 'Screen'
     Database = 'Database'
     User = 'User'
+    CREATE_RESEARCH = 'Create Research'
 
 
 def create_or_update_session(key, init_value=None, updated_value=None):
