@@ -3,7 +3,7 @@ import datetime as dt
 import streamlit as st
 
 from Repository.FirebaseRepository import FirebaseRepository
-from model.ResearchModel import TagModel
+from model.ResearchModel import TagModel, ResearchModel
 from model.UserModel import UserModel
 from utils.Utils import create_or_update_session, States, reset_to_none
 
@@ -70,10 +70,11 @@ else:
                 st.rerun()
         else:
             with st.container(border=True):
+                dead_line_time_stamp = None
                 st.header('Create New Research Application Form')
                 title = st.text_input('Title')
                 description = st.text_area('Description')
-                if st.checkbox('Add Deadline'):
+                if st.checkbox('Add Deadline', key='add_deadline'):
                     dead_line = st.date_input('Deadline')
                     dead_line_time_stamp = int(
                         dt.datetime.combine(dead_line, dt.datetime.min.time()).timestamp() * 1000)
@@ -104,10 +105,19 @@ else:
                         st.error('Title, Description, and Tags cannot be empty')
                         st.stop()
                     try:
-                        st.write(getSelectedTags)
-                        st.success('Research Application Form created successfully')
-                        # create_or_update_session(States.CREATE_RESEARCH, updated_value=False)
-                        # st.rerun()
+                        database.add_new_research(
+                            research=ResearchModel(
+                                title=title,
+                                description=description,
+                                created_by=userModel.name,
+                                created_by_UID=userModel.uid,
+                                tags=str([tag.__dict__ for tag in getSelectedTags]),
+                                dead_line=dead_line_time_stamp if dead_line_time_stamp else None,
+                                key=''
+                            )
+                        )
+                        create_or_update_session(States.CREATE_RESEARCH, updated_value=False)
+                        st.rerun()
                     except Exception as e:
                         st.error(f'An unexpected error occurred: {str(e)}')
             with col2:

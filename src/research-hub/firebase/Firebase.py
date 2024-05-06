@@ -6,7 +6,7 @@ import streamlit as st
 from firebase_admin import credentials, firestore, db
 from google.cloud.firestore_v1 import Client, FieldFilter
 
-from model.ResearchModel import TagModel
+from model.ResearchModel import TagModel, ResearchModel
 from model.UserModel import UserModel
 from utils.Exceptions import LoginException, TagException
 from utils.Secrates import json_data
@@ -61,10 +61,25 @@ class Firebase:
         data = json.loads(tags_json)
         return [TagModel(**tag_data) for tag_data in data.values()]
 
+    def add_new_research(self, research: ResearchModel):
+        doc_ref = self.db.collection('research').document()
+        research.key = doc_ref.id
+        doc_ref.set(research.__dict__)
+
 
 def test():
     firebase = Firebase(json_data)
-    # firebase.add_tag(TagModel(name='Google'))
-    print(firebase.get_tags())
+    firebase.add_new_research(
+        research=ResearchModel(
+            title='Title',
+            description='Description',
+            created_by='User',
+            created_by_UID='UID',
+            tags='[{"created_by": "user1", "name": "tag1", "created": 1715018917632}, '
+                 '{"created_by": "user2", "name": "tag2", "created": 1715018917632}]',
+            key=''
+        )
+    )
 
-test()
+
+# test()

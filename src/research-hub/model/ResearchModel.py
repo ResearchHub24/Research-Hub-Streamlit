@@ -14,6 +14,7 @@ class TagModel:
 
 @dataclass
 class ResearchModel:
+    key: str
     title: str
     description: str
     created_by: str

@@ -16,3 +16,6 @@ class FirebaseRepository:
 
     def add_tag(self, tag: TagModel):
         self.__firebase.add_tag(tag)
+
+    def add_new_research(self, research):
+        self.__firebase.add_new_research(research)
