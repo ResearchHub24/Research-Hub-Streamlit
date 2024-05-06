@@ -1,8 +1,7 @@
 import streamlit as st
 
-from firebase.Firebase import Firebase
+from Repository.FirebaseRepository import FirebaseRepository
 from model.UserModel import UserModel
-from utils.Secrates import json_data
 from utils.Utils import create_or_update_session, States, reset_to_none
 
 if create_or_update_session(States.User.value) is None:
@@ -10,9 +9,9 @@ if create_or_update_session(States.User.value) is None:
 else:
     st.set_page_config(page_title='Research Hub', page_icon='🔒', layout='wide')
 
-database: Firebase = create_or_update_session(
+database: FirebaseRepository = create_or_update_session(
     States.Database.value,
-    init_value=Firebase(json_data)
+    init_value=FirebaseRepository()
 )
 mainContainer = st.container()
 sidebar = st.sidebar
@@ -29,13 +28,14 @@ if create_or_update_session(States.User.value) is None:
                 st.error('Email or Password cannot be empty')
                 st.stop()
             try:
-                create_or_update_session(States.User.value, updated_value=database.log_in(email, password))
+                user = database.log_in(email, password)
+                st.session_state[States.User.value] = user
                 st.rerun()
             except Exception as e:
                 mainContainer.warning(f'An unexpected error occurred: {str(e)}')
 else:
-    userModel: UserModel = create_or_update_session(States.User.value)
     with mainContainer:
+        userModel: UserModel = create_or_update_session(States.User.value)
         st.balloons()
         st.title('Research Hub')
         st.write(f'Welcome {userModel.name}')

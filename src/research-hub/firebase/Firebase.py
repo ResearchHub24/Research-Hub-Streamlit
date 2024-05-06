@@ -1,9 +1,16 @@
+import json
+from typing import List
+
 import firebase_admin
-from firebase_admin import credentials, firestore
+import streamlit as st
+from firebase_admin import credentials, firestore, db
 from google.cloud.firestore_v1 import Client, FieldFilter
 
+from model.ResearchModel import TagModel
 from model.UserModel import UserModel
-from utils.Exceptions import LoginException
+from utils.Exceptions import LoginException, TagException
+from utils.Secrates import json_data
+from utils.Utils import States
 
 
 class Firebase:
@@ -13,8 +20,11 @@ class Firebase:
             self.app = firebase_admin.get_app()
         except ValueError:
             # If not, initialize a new app
-            self.app = firebase_admin.initialize_app(self.__credit)
+            self.app = firebase_admin.initialize_app(self.__credit, {
+                'databaseURL': 'https://researchhub-21392-default-rtdb.firebaseio.com/'
+            })
         self.db: Client = firestore.client()
+        self.ref = db.reference('tags')
 
     def log_in(self, email, password):
         user = self.db.collection('user_database').where(
@@ -28,3 +38,30 @@ class Firebase:
             return user
         else:
             raise LoginException('Invalid Password')
+
+    def get_tags(self):
+        if st.session_state[States.User.name] is None:
+            raise LoginException('Please login to continue')
+
+        tags = str(self.ref.get())
+        return self.tagsToList(tags.replace('\'', '\"'))
+
+    def add_tag(self, tag: TagModel):
+        if st.session_state[States.User.name] is None:
+            raise LoginException('Please login to continue')
+        uid = st.session_state[States.User.name].uid
+        tag.created_by = uid
+        if self.ref.child(tag.name).get():
+            raise TagException('Tag already exists')
+        self.ref.child(tag.name).set(tag.__dict__)
+
+    @staticmethod
+    def tagsToList(tags_json) -> List[TagModel]:
+        data = json.loads(tags_json)
+        return [TagModel(**tag_data) for tag_data in data.values()]
+
+
+def test():
+    firebase = Firebase(json_data)
+    firebase.add_tag(TagModel(name='Google'))
+    print(firebase.get_tags())
