@@ -22,3 +22,6 @@ class FirebaseRepository:
 
     def get_research(self):
         return self.__firebase.get_research()
+
+    def delete_research(self, key):
+        self.__firebase.delete_research(key)

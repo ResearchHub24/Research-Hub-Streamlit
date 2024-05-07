@@ -78,8 +78,10 @@ def research_model(model: ResearchModel):
             if st.button('Edit', type='primary', use_container_width=True):
                 pass
         with delete_tab:
-            if st.button('Delete', use_container_width=True):
-                pass
+            with st.popover('Delete', use_container_width=True):
+                if st.button('Are you sure you want to delete this research'):
+                    database.delete_research(model.key)
+                    st.rerun()
 
 
 if create_or_update_session(States.User.value) is None:

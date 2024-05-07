@@ -72,6 +72,9 @@ class Firebase:
         ).stream())
         return [ResearchModel(**doc.to_dict()) for doc in research]
 
+    def delete_research(self, key):
+        self.db.collection('research').document(key).delete()
+
 
 def test():
     firebase = Firebase(json_data)
