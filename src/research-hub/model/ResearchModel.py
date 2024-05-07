@@ -36,9 +36,17 @@ class ResearchModel:
 
     @property
     def tagsToList(self) -> List[TagModel]:
-        tags_list = json.loads(self.tags)
-        return [TagModel(**tag) for tag in tags_list]
-
+        if not self.tags or self.tags == 'None':
+            return []
+        try:
+            data = json.loads(self.tags.replace('\'', '\"'))
+            if isinstance(data, dict):
+                return [TagModel(**tag_data) for tag_data in data.values()]
+            elif isinstance(data, list):
+                return [TagModel(**tag_data) for tag_data in data]
+        except json.JSONDecodeError:
+            print(f"Unable to parse tags: {self.tags}")
+            return []
 # def test():
 #     dummy_json = '''
 #     [{"created_by": "user1", "name": "tag1", "created": 1715018917632}, {"created_by": "user2", "name": "tag2", "created": 1715018917632}]'''

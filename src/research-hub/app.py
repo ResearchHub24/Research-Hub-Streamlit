@@ -55,6 +55,33 @@ def side_bar():
                 st.rerun()
 
 
+def research_model(model: ResearchModel):
+    with st.container(border=True):
+        st.header(model.title)
+        if len(model.description) > 500:
+            st.write(model.description[:500] + '...')
+        else:
+            st.write(model.description)
+        if len(model.tagsToList) != 0:
+            all_tags = 'Tag : '
+            for tag in model.tagsToList:
+                all_tags += f'{tag.name}, '
+            st.write(all_tags[:-2])
+        with st.expander('More Info'):
+            date, deadline = st.columns(2)
+            with date:
+                st.write(f'Created on: {model.formattedTime}')
+            with deadline:
+                st.write(f'Deadline: {model.formattedDeadline}')
+        edit_tag, delete_tab = st.columns(2)
+        with edit_tag:
+            if st.button('Edit', type='primary', use_container_width=True):
+                pass
+        with delete_tab:
+            if st.button('Delete', use_container_width=True):
+                pass
+
+
 if create_or_update_session(States.User.value) is None:
     log_in_screen()
 else:
@@ -68,6 +95,12 @@ else:
             if st.button('Create New Research Application Form', type='primary'):
                 create_or_update_session(States.CREATE_RESEARCH, updated_value=True)
                 st.rerun()
+            all_research = database.get_research()
+            if len(all_research) != 0:
+                st.header('All Research')
+                for research in all_research:
+                    research_model(research)
+
         else:
             with st.container(border=True):
                 dead_line_time_stamp = None

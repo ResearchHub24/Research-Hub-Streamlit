@@ -66,20 +66,15 @@ class Firebase:
         research.key = doc_ref.id
         doc_ref.set(research.__dict__)
 
+    def get_research(self):
+        research = (self.db.collection('research').where(
+            filter=FieldFilter('created_by_UID', '==', st.session_state[States.User.name].uid),
+        ).stream())
+        return [ResearchModel(**doc.to_dict()) for doc in research]
+
 
 def test():
     firebase = Firebase(json_data)
-    firebase.add_new_research(
-        research=ResearchModel(
-            title='Title',
-            description='Description',
-            created_by='User',
-            created_by_UID='UID',
-            tags='[{"created_by": "user1", "name": "tag1", "created": 1715018917632}, '
-                 '{"created_by": "user2", "name": "tag2", "created": 1715018917632}]',
-            key=''
-        )
-    )
-
-
+    for reg in firebase.get_research():
+        print(reg)
 # test()

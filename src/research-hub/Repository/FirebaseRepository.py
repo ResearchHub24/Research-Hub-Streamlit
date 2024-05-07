@@ -19,3 +19,6 @@ class FirebaseRepository:
 
     def add_new_research(self, research):
         self.__firebase.add_new_research(research)
+
+    def get_research(self):
+        return self.__firebase.get_research()
