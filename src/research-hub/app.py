@@ -153,7 +153,6 @@ else:
                             st.error(f'An unexpected error occurred: {str(e)}')
 
             with st.expander('Questions'):
-                # TODO : Question Section
                 question_list: list[str] = create_or_update_session(States.QUESTION_LIST, init_value=[])
                 if isEdit:
                     create_or_update_session(
