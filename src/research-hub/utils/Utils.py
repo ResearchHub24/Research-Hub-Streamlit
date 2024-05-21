@@ -1,6 +1,7 @@
 from enum import Enum
 
 import streamlit as st
+import json
 
 
 class States(Enum):
@@ -9,6 +10,7 @@ class States(Enum):
     User = 'User'
     CREATE_RESEARCH = 'Create Research'
     UPDATE_RESEARCH = 'Update Research'
+    QUESTION_LIST = 'Question List'
 
 
 def create_or_update_session(key, init_value=None, updated_value=None):
@@ -38,3 +40,27 @@ def reset_to_none(key):
     """
     if key in st.session_state:
         st.session_state[key] = None
+
+
+def list_to_json(lst):
+    try:
+        return json.dumps(lst)
+    except json.JSONDecodeError:
+        return ''
+
+
+def json_to_list(json_str) -> list[str]:
+    if json_str == '':
+        return []
+    try:
+        return json.loads(json_str)
+    except json.JSONDecodeError:
+        return []
+
+
+def check_item_is_present(lst: list[str], item: str):
+    item = item.lower()
+    for i in lst:
+        if i.lower() == item:
+            return True
+    return False

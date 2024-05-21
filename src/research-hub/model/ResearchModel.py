@@ -22,6 +22,7 @@ class ResearchModel:
     created: int = int(time.time() * 1000)  # Convert to milliseconds
     dead_line: int = None
     tags: str = ""
+    questions: str = ""
 
     @property
     def formattedTime(self) -> str:

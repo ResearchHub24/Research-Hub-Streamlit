@@ -6,7 +6,8 @@ import streamlit as st
 from Repository.FirebaseRepository import FirebaseRepository
 from model.ResearchModel import TagModel, ResearchModel
 from model.UserModel import UserModel
-from utils.Utils import create_or_update_session, States, reset_to_none
+from utils.Utils import create_or_update_session, States, reset_to_none, json_to_list, check_item_is_present, \
+    list_to_json
 
 if create_or_update_session(States.User.value) is None:
     st.set_page_config(page_title='Research Hub', page_icon='📚', layout='centered')
@@ -151,11 +152,54 @@ else:
                         except Exception as e:
                             st.error(f'An unexpected error occurred: {str(e)}')
 
+            with st.expander('Questions'):
+                # TODO : Question Section
+                question_list: list[str] = create_or_update_session(States.QUESTION_LIST, init_value=[])
+                if isEdit:
+                    create_or_update_session(
+                        States.QUESTION_LIST,
+                        updated_value=json_to_list(create_or_update_session(States.UPDATE_RESEARCH).questions)
+                    )
+
+                question = st.text_area('Question')
+                for q in question_list:
+                    write, delete = st.columns([4, 1])
+                    with write:
+                        st.write(q)
+                    with delete:
+                        if st.button('Delete', key=q):
+                            question_list.remove(q)
+                            st.rerun()
+                if st.button('Add Question', type='primary'):
+                    if question == '':
+                        st.error('Question cannot be empty')
+                        st.stop()
+                    if check_item_is_present(question_list, question):
+                        st.error('Question already exists')
+                        st.stop()
+                    question_list.append(question)
+                    create_or_update_session(States.QUESTION_LIST, updated_value=question_list)
+                    st.rerun()
             col1, col2 = st.columns(2)
+            with col2:
+                if st.button('Back', type='primary', use_container_width=True):
+                    create_or_update_session(States.CREATE_RESEARCH, updated_value=False)
+                    reset_to_none(States.UPDATE_RESEARCH)
+                    create_or_update_session(States.QUESTION_LIST, updated_value=[])
+                    st.rerun()
             with col1:
                 if st.button('Submit', type='primary', use_container_width=True):
-                    if title == '' or description == '' or len(getSelectedTags) == 0:
-                        st.error('Title, Description, and Tags cannot be empty')
+                    if title == '':
+                        st.error('Title cannot be empty')
+                        st.stop()
+                    if description == '':
+                        st.error('Description cannot be empty')
+                        st.stop()
+                    if len(getSelectedTags) == 0:
+                        st.error('Please select at least one tag')
+                        st.stop()
+                    if len(question_list) == 0:
+                        st.error('Please add at least one question')
                         st.stop()
                     try:
                         model = ResearchModel(
@@ -165,7 +209,8 @@ else:
                             created_by_UID=userModel.uid,
                             tags=str([tag.__dict__ for tag in getSelectedTags]),
                             dead_line=dead_line_time_stamp if dead_line_time_stamp else None,
-                            key=create_or_update_session(States.UPDATE_RESEARCH).key if isEdit else None
+                            key=create_or_update_session(States.UPDATE_RESEARCH).key if isEdit else None,
+                            questions=list_to_json(question_list)
                         )
                         if isEdit:
                             database.update_research(model)
@@ -175,11 +220,7 @@ else:
                             )
                         create_or_update_session(States.CREATE_RESEARCH, updated_value=False)
                         reset_to_none(States.UPDATE_RESEARCH)
+                        create_or_update_session(States.QUESTION_LIST, updated_value=[])
                         st.rerun()
                     except Exception as e:
                         st.error(f'An unexpected error occurred: {str(e)}')
-            with col2:
-                if st.button('Back', type='primary', use_container_width=True):
-                    create_or_update_session(States.CREATE_RESEARCH, updated_value=False)
-                    reset_to_none(States.UPDATE_RESEARCH)
-                    st.rerun()
