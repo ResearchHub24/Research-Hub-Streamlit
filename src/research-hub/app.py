@@ -1,4 +1,5 @@
 import datetime as dt
+from typing import List
 
 import streamlit as st
 
@@ -18,6 +19,10 @@ database: FirebaseRepository = create_or_update_session(
 )
 create_or_update_session(
     States.CREATE_RESEARCH,
+    init_value=False
+)
+create_or_update_session(
+    States.UPDATE_RESEARCH,
     init_value=False
 )
 mainContainer = st.container()
@@ -55,39 +60,43 @@ def side_bar():
                 st.rerun()
 
 
-def research_model(model: ResearchModel):
+def research_model(model_class: ResearchModel):
     with st.container(border=True):
-        st.header(model.title)
-        if len(model.description) > 500:
-            st.write(model.description[:500] + '...')
+        st.header(model_class.title)
+        if len(model_class.description) > 500:
+            st.write(model_class.description[:500] + '...')
         else:
-            st.write(model.description)
-        if len(model.tagsToList) != 0:
+            st.write(model_class.description)
+        if len(model_class.tagsToList) != 0:
             all_tags = 'Tag : '
-            for tag in model.tagsToList:
+            for tag in model_class.tagsToList:
                 all_tags += f'{tag.name}, '
             st.write(all_tags[:-2])
         with st.expander('More Info'):
             date, deadline = st.columns(2)
             with date:
-                st.write(f'Created on: {model.formattedTime}')
+                st.write(f'Created on: {model_class.formattedTime}')
             with deadline:
-                st.write(f'Deadline: {model.formattedDeadline}')
+                st.write(f'Deadline: {model_class.formattedDeadline}')
         edit_tag, delete_tab = st.columns(2)
         with edit_tag:
-            if st.button('Edit', type='primary', use_container_width=True):
-                pass
+            if st.button('Edit', type='primary', use_container_width=True,
+                         key=str(model_class.created) + model_class.title + 'edit'):
+                create_or_update_session(States.CREATE_RESEARCH, updated_value=True)
+                create_or_update_session(States.UPDATE_RESEARCH, updated_value=model_class)
+                st.rerun()
         with delete_tab:
             with st.popover('Delete', use_container_width=True):
-                if st.button('Are you sure you want to delete this research'):
-                    database.delete_research(model.key)
+                if st.button('Are you sure you want to delete this research',
+                             key=str(model_class.created) + model_class.title + 'delete-confirm'):
+                    database.delete_research(model_class.key)
                     st.rerun()
 
 
 if create_or_update_session(States.User.value) is None:
     log_in_screen()
 else:
-    with mainContainer:
+    with (mainContainer):
         userModel: UserModel = create_or_update_session(States.User.value)
         # st.balloons()
         st.title('Research Hub')
@@ -99,39 +108,48 @@ else:
                 st.rerun()
             all_research = database.get_research()
             if len(all_research) != 0:
-                st.header('All Research')
+                st.header('My Research')
                 for research in all_research:
                     research_model(research)
 
         else:
             with st.container(border=True):
+                isEdit = create_or_update_session(States.UPDATE_RESEARCH) and \
+                         create_or_update_session(States.UPDATE_RESEARCH) is not None
                 dead_line_time_stamp = None
                 st.header('Create New Research Application Form')
-                title = st.text_input('Title')
-                description = st.text_area('Description')
+                title = st.text_input('Title',
+                                      value=create_or_update_session(States.UPDATE_RESEARCH).title if isEdit else None)
+                description = st.text_area('Description',
+                                           value=create_or_update_session(
+                                               States.UPDATE_RESEARCH).description if isEdit else None)
                 if st.checkbox('Add Deadline', key='add_deadline'):
                     dead_line = st.date_input('Deadline')
                     dead_line_time_stamp = int(
                         dt.datetime.combine(dead_line, dt.datetime.min.time()).timestamp() * 1000)
                 st.write('Note: Leave the deadline empty if there is no deadline')
+                if isEdit:
+                    selectedTag: List[TagModel] = create_or_update_session(States.UPDATE_RESEARCH).tagsToList
+            with st.expander('Tags'):
                 tags = database.get_tags()
                 if len(tags) != 0:
-                    st.write('Tags')
-                    checkbox_states = {tag.name: st.checkbox(tag.name, key=tag.name) for tag in tags}
+                    checkbox_states = {tag.name: st.checkbox(tag.name, key=tag.name,
+                                                             value=tag in selectedTag if isEdit else False) for tag
+                                       in tags}
                     getSelectedTags = [tag for tag in tags if checkbox_states[tag.name]]
-                st.write('Create New Tag')
-                new_tag = st.text_input('Tag Name')
-                if st.button('Done', type='primary', key='done'):
-                    try:
-                        database.add_tag(
-                            TagModel(
-                                name=new_tag,
+                with st.popover('Create New Tag', use_container_width=True):
+                    name = st.text_input("Tag name", key='tag_name')
+                    if st.button('Done', type='primary', key='done'):
+                        try:
+                            database.add_tag(
+                                TagModel(
+                                    name=name,
+                                )
                             )
-                        )
-                        st.success('Tag created successfully')
-                        st.rerun()
-                    except Exception as e:
-                        st.error(f'An unexpected error occurred: {str(e)}')
+                            st.success('Tag created successfully')
+                            st.rerun()
+                        except Exception as e:
+                            st.error(f'An unexpected error occurred: {str(e)}')
 
             col1, col2 = st.columns(2)
             with col1:
@@ -140,22 +158,28 @@ else:
                         st.error('Title, Description, and Tags cannot be empty')
                         st.stop()
                     try:
-                        database.add_new_research(
-                            research=ResearchModel(
-                                title=title,
-                                description=description,
-                                created_by=userModel.name,
-                                created_by_UID=userModel.uid,
-                                tags=str([tag.__dict__ for tag in getSelectedTags]),
-                                dead_line=dead_line_time_stamp if dead_line_time_stamp else None,
-                                key=''
-                            )
+                        model = ResearchModel(
+                            title=title,
+                            description=description,
+                            created_by=userModel.name,
+                            created_by_UID=userModel.uid,
+                            tags=str([tag.__dict__ for tag in getSelectedTags]),
+                            dead_line=dead_line_time_stamp if dead_line_time_stamp else None,
+                            key=create_or_update_session(States.UPDATE_RESEARCH).key if isEdit else None
                         )
+                        if isEdit:
+                            database.update_research(model)
+                        else:
+                            database.add_new_research(
+                                research=model
+                            )
                         create_or_update_session(States.CREATE_RESEARCH, updated_value=False)
+                        reset_to_none(States.UPDATE_RESEARCH)
                         st.rerun()
                     except Exception as e:
                         st.error(f'An unexpected error occurred: {str(e)}')
             with col2:
                 if st.button('Back', type='primary', use_container_width=True):
                     create_or_update_session(States.CREATE_RESEARCH, updated_value=False)
+                    reset_to_none(States.UPDATE_RESEARCH)
                     st.rerun()

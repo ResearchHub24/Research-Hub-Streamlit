@@ -75,6 +75,9 @@ class Firebase:
     def delete_research(self, key):
         self.db.collection('research').document(key).delete()
 
+    def update_research(self, research: ResearchModel):
+        self.db.collection('research').document(research.key).set(research.__dict__)
+
 
 def test():
     firebase = Firebase(json_data)

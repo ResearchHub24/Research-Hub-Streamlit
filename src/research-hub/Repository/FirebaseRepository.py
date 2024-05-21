@@ -25,3 +25,6 @@ class FirebaseRepository:
 
     def delete_research(self, key):
         self.__firebase.delete_research(key)
+
+    def update_research(self, research):
+        self.__firebase.update_research(research)
