@@ -131,7 +131,7 @@ else:
                 st.write('Note: Leave the deadline empty if there is no deadline')
                 if isEdit:
                     selectedTag: List[TagModel] = create_or_update_session(States.UPDATE_RESEARCH).tagsToList
-            with st.expander('Tags'):
+            with st.expander('Tags',expanded=isEdit):
                 tags = database.get_tags()
                 if len(tags) != 0:
                     checkbox_states = {tag.name: st.checkbox(tag.name, key=tag.name,
@@ -152,13 +152,14 @@ else:
                         except Exception as e:
                             st.error(f'An unexpected error occurred: {str(e)}')
 
-            with st.expander('Questions'):
+            with st.expander('Questions', expanded=isEdit):
                 question_list: list[str] = create_or_update_session(States.QUESTION_LIST, init_value=[])
                 if isEdit:
                     create_or_update_session(
                         States.QUESTION_LIST,
                         updated_value=json_to_list(create_or_update_session(States.UPDATE_RESEARCH).questions)
                     )
+                    question_list = create_or_update_session(States.QUESTION_LIST)
 
                 question = st.text_area('Question')
                 for q in question_list:
