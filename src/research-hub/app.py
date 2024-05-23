@@ -131,28 +131,28 @@ else:
                 st.write('Note: Leave the deadline empty if there is no deadline')
                 if isEdit:
                     selectedTag: List[TagModel] = create_or_update_session(States.UPDATE_RESEARCH).tagsToList
-            with st.expander('Tags',expanded=isEdit):
+            with st.expander('Tags',expanded=create_or_update_session(States.UPDATE_RESEARCH) is not None):
                 tags = database.get_tags()
                 if len(tags) != 0:
                     checkbox_states = {tag.name: st.checkbox(tag.name, key=tag.name,
                                                              value=tag in selectedTag if isEdit else False) for tag
                                        in tags}
-                    getSelectedTags = [tag for tag in tags if checkbox_states[tag.name]]
+                getSelectedTags = [tag for tag in tags if checkbox_states[tag.name]]
                 with st.popover('Create New Tag', use_container_width=True):
                     name = st.text_input("Tag name", key='tag_name')
-                    if st.button('Done', type='primary', key='done'):
-                        try:
-                            database.add_tag(
-                                TagModel(
-                                    name=name,
-                                )
+                if st.button('Done', type='primary', key='done'):
+                    try:
+                        database.add_tag(
+                            TagModel(
+                                name=name,
                             )
-                            st.success('Tag created successfully')
-                            st.rerun()
-                        except Exception as e:
-                            st.error(f'An unexpected error occurred: {str(e)}')
+                        )
+                        st.success('Tag created successfully')
+                        st.rerun()
+                    except Exception as e:
+                        st.error(f'An unexpected error occurred: {str(e)}')
 
-            with st.expander('Questions', expanded=isEdit):
+            with st.expander('Questions', expanded=create_or_update_session(States.UPDATE_RESEARCH) is not None):
                 question_list: list[str] = create_or_update_session(States.QUESTION_LIST, init_value=[])
                 if isEdit:
                     create_or_update_session(
@@ -184,8 +184,8 @@ else:
             with col2:
                 if st.button('Back', type='primary', use_container_width=True):
                     create_or_update_session(States.CREATE_RESEARCH, updated_value=False)
-                    reset_to_none(States.UPDATE_RESEARCH)
                     create_or_update_session(States.QUESTION_LIST, updated_value=[])
+                    reset_to_none(States.UPDATE_RESEARCH)
                     st.rerun()
             with col1:
                 if st.button('Submit', type='primary', use_container_width=True):
