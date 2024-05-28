@@ -26,6 +26,10 @@ create_or_update_session(
     States.UPDATE_RESEARCH,
     init_value=False
 )
+create_or_update_session(
+    States.APPLICATION_LIST,
+    init_value=False
+)
 mainContainer = st.container()
 sidebar = st.sidebar
 
@@ -79,6 +83,10 @@ def research_model(model_class: ResearchModel):
                 st.write(f'Created on: {model_class.formattedTime}')
             with deadline:
                 st.write(f'Deadline: {model_class.formattedDeadline}')
+        if st.button('View Applications', type='primary', use_container_width=True,
+                     key=str(model_class.created) + model_class.title + 'applications'):
+            create_or_update_session(States.APPLICATION_LIST, updated_value=True)
+            st.rerun()
         edit_tag, delete_tab = st.columns(2)
         with edit_tag:
             if st.button('Edit', type='primary', use_container_width=True,
@@ -232,8 +240,13 @@ else:
         st.title('Research Hub')
         st.write(f'Welcome {userModel.name}')
         side_bar()
-        if not create_or_update_session(States.CREATE_RESEARCH):
+        if not create_or_update_session(States.CREATE_RESEARCH) and not create_or_update_session(
+                States.APPLICATION_LIST):
             home_screen()
-
+        elif create_or_update_session(States.APPLICATION_LIST):
+            st.header('Filled Applications')
+            if st.button('Back', use_container_width=False):
+                create_or_update_session(States.APPLICATION_LIST, updated_value=False)
+                st.rerun()
         else:
             create_application_screen()

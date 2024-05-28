@@ -11,6 +11,7 @@ class States(Enum):
     CREATE_RESEARCH = 'Create Research'
     UPDATE_RESEARCH = 'Update Research'
     QUESTION_LIST = 'Question List'
+    APPLICATION_LIST = 'Application List'
 
 
 def create_or_update_session(key, init_value=None, updated_value=None):
