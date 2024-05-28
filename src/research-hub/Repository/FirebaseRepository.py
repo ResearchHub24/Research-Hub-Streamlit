@@ -1,5 +1,5 @@
 from firebase.Firebase import Firebase
-from model.ResearchModel import TagModel
+from model.ResearchModel import TagModel, ApplicationModel
 from model.UserModel import UserModel
 from utils.Secrates import json_data
 
@@ -28,3 +28,6 @@ class FirebaseRepository:
 
     def update_research(self, research):
         self.__firebase.update_research(research)
+
+    def get_application(self, path) -> list[ApplicationModel]:
+        return self.__firebase.get_application(path)

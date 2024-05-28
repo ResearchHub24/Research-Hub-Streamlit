@@ -6,7 +6,7 @@ import streamlit as st
 from firebase_admin import credentials, firestore, db
 from google.cloud.firestore_v1 import Client, FieldFilter
 
-from model.ResearchModel import TagModel, ResearchModel
+from model.ResearchModel import TagModel, ResearchModel, ApplicationModel
 from model.UserModel import UserModel
 from utils.Exceptions import LoginException, TagException
 from utils.Secrates import json_data
@@ -78,9 +78,15 @@ class Firebase:
     def update_research(self, research: ResearchModel):
         self.db.collection('research').document(research.key).set(research.__dict__)
 
+    def get_application(self, path) -> List[ApplicationModel]:
+        applications = (self.db.collection('research').document(path)
+                        .collection('submitted_form').stream())
+        return [ApplicationModel(**doc.to_dict()) for doc in applications]
+
 
 def test():
     firebase = Firebase(json_data)
-    for reg in firebase.get_research():
+    for reg in firebase.get_application('EHmS73Hks4ojRGI5Mads'):
         print(reg)
+
 # test()

@@ -11,7 +11,7 @@ class States(Enum):
     CREATE_RESEARCH = 'Create Research'
     UPDATE_RESEARCH = 'Update Research'
     QUESTION_LIST = 'Question List'
-    APPLICATION_LIST = 'Application List'
+    VIEW_APPLICATION_ITEM_PATH = 'View Application Item Path'
 
 
 def create_or_update_session(key, init_value=None, updated_value=None):
@@ -31,6 +31,13 @@ def create_or_update_session(key, init_value=None, updated_value=None):
         st.session_state[key] = updated_value
 
     return st.session_state[key] if key in st.session_state else None
+
+
+def remove_key_from_session_state(key):
+    """Function to remove a key from session state.
+    """
+    if key in st.session_state:
+        del st.session_state[key]
 
 
 def reset_to_none(key):

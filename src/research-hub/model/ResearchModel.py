@@ -48,13 +48,32 @@ class ResearchModel:
         except json.JSONDecodeError:
             print(f"Unable to parse tags: {self.tags}")
             return []
-# def test():
-#     dummy_json = '''
-#     [{"created_by": "user1", "name": "tag1", "created": 1715018917632}, {"created_by": "user2", "name": "tag2", "created": 1715018917632}]'''
-#
-#     model = ResearchModel(title="Title", description="Description", created_by="User", created_by_UID="UID",
-#                           tags=dummy_json)
-#     print(model.formattedTime)
-#     print(model.formattedDeadline)
-#     print(model.tagsToList)
-#
+
+
+@dataclass
+class QuestionModel:
+    question: str
+    answer: str
+
+
+@dataclass
+class ApplicationModel:
+    studentEmail: str
+    studentName: str
+    studentPhoneNumber: str
+    filledDate: int
+    answers: str
+
+    @property
+    def convert_answer_json_to_question_model(self):
+        if not self.answers or self.answers == 'None':
+            return []
+        try:
+            data = json.loads(self.answers)
+            if isinstance(data, dict):
+                return [QuestionModel(**tag_data) for tag_data in data.values()]
+            elif isinstance(data, list):
+                return [QuestionModel(**tag_data) for tag_data in data]
+        except json.JSONDecodeError:
+            print(f"Unable to parse answers: {self.answers}")
+            return []

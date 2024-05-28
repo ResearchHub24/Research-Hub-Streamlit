@@ -4,10 +4,10 @@ from typing import List
 import streamlit as st
 
 from Repository.FirebaseRepository import FirebaseRepository
-from model.ResearchModel import TagModel, ResearchModel
+from model.ResearchModel import TagModel, ResearchModel, ApplicationModel
 from model.UserModel import UserModel
 from utils.Utils import create_or_update_session, States, reset_to_none, json_to_list, check_item_is_present, \
-    list_to_json
+    list_to_json, remove_key_from_session_state
 
 if create_or_update_session(States.User.value) is None:
     st.set_page_config(page_title='Research Hub', page_icon='📚', layout='centered')
@@ -27,8 +27,8 @@ create_or_update_session(
     init_value=False
 )
 create_or_update_session(
-    States.APPLICATION_LIST,
-    init_value=False
+    States.VIEW_APPLICATION_ITEM_PATH,
+    init_value=''
 )
 mainContainer = st.container()
 sidebar = st.sidebar
@@ -85,7 +85,7 @@ def research_model(model_class: ResearchModel):
                 st.write(f'Deadline: {model_class.formattedDeadline}')
         if st.button('View Applications', type='primary', use_container_width=True,
                      key=str(model_class.created) + model_class.title + 'applications'):
-            create_or_update_session(States.APPLICATION_LIST, updated_value=True)
+            create_or_update_session(States.VIEW_APPLICATION_ITEM_PATH, updated_value=model_class.key)
             st.rerun()
         edit_tag, delete_tab = st.columns(2)
         with edit_tag:
@@ -158,13 +158,15 @@ def create_application_screen():
             except Exception as e:
                 st.error(f'An unexpected error occurred: {str(e)}')
     with st.expander('Questions', expanded=create_or_update_session(States.UPDATE_RESEARCH) is not None):
-        question_list: list[str] = create_or_update_session(States.QUESTION_LIST, init_value=[])
-        if is_edit:
-            create_or_update_session(
-                States.QUESTION_LIST,
-                updated_value=json_to_list(create_or_update_session(States.UPDATE_RESEARCH).questions)
-            )
-            question_list = create_or_update_session(States.QUESTION_LIST)
+        question_list: list[str] = create_or_update_session(States.QUESTION_LIST, init_value=json_to_list(
+            create_or_update_session(States.UPDATE_RESEARCH).questions) if is_edit else []
+                                                            )
+        # if is_edit:
+        #     create_or_update_session(
+        #         States.QUESTION_LIST,
+        #         updated_value=json_to_list(create_or_update_session(States.UPDATE_RESEARCH).questions)
+        #     )
+        #     question_list = create_or_update_session(States.QUESTION_LIST)
 
         question = st.text_area('Question')
         for q in question_list:
@@ -174,6 +176,11 @@ def create_application_screen():
             with delete:
                 if st.button('Delete', key=q):
                     question_list.remove(q)
+                    if is_edit:
+                        create_or_update_session(
+                            States.QUESTION_LIST,
+                            updated_value=question_list
+                        )
                     st.rerun()
         if st.button('Add Question', type='primary'):
             if question == '':
@@ -191,6 +198,7 @@ def create_application_screen():
             create_or_update_session(States.CREATE_RESEARCH, updated_value=False)
             create_or_update_session(States.QUESTION_LIST, updated_value=[])
             reset_to_none(States.UPDATE_RESEARCH)
+            remove_key_from_session_state(States.QUESTION_LIST)
             st.rerun()
     with col1:
         if st.button('Submit', type='primary', use_container_width=True):
@@ -226,9 +234,24 @@ def create_application_screen():
                 create_or_update_session(States.CREATE_RESEARCH, updated_value=False)
                 reset_to_none(States.UPDATE_RESEARCH)
                 create_or_update_session(States.QUESTION_LIST, updated_value=[])
+                remove_key_from_session_state(States.QUESTION_LIST)
                 st.rerun()
             except Exception as e:
                 st.error(f'An unexpected error occurred: {str(e)}')
+
+
+def application_item(item: ApplicationModel):
+    with st.container(border=True):
+        st.header(f'Application by {item.studentName}')
+        st.write(f'Email: {item.studentEmail}')
+        st.write(f'Phone Number: {item.studentPhoneNumber}')
+        st.write(f'Filled on: {dt.datetime.fromtimestamp(item.filledDate / 1000).strftime("%d %b %Y")}')
+        answers = item.convert_answer_json_to_question_model
+        with st.expander('Answers', expanded=True):
+            for answer in answers:
+                with st.container(border=True):
+                    st.write(f'Q: {answer.question}')
+                    st.write(f'A: {answer.answer}')
 
 
 if create_or_update_session(States.User.value) is None:
@@ -240,13 +263,19 @@ else:
         st.title('Research Hub')
         st.write(f'Welcome {userModel.name}')
         side_bar()
-        if not create_or_update_session(States.CREATE_RESEARCH) and not create_or_update_session(
-                States.APPLICATION_LIST):
+        if not create_or_update_session(States.CREATE_RESEARCH) and create_or_update_session(
+                States.VIEW_APPLICATION_ITEM_PATH) == '':
             home_screen()
-        elif create_or_update_session(States.APPLICATION_LIST):
+        elif create_or_update_session(States.VIEW_APPLICATION_ITEM_PATH) != '':
             st.header('Filled Applications')
+            all_application = database.get_application(create_or_update_session(States.VIEW_APPLICATION_ITEM_PATH))
+            if len(all_application) == 0:
+                st.write('No applications found')
+            else:
+                for app in all_application:
+                    application_item(app)
             if st.button('Back', use_container_width=False):
-                create_or_update_session(States.APPLICATION_LIST, updated_value=False)
+                create_or_update_session(States.VIEW_APPLICATION_ITEM_PATH, updated_value='')
                 st.rerun()
         else:
             create_application_screen()
