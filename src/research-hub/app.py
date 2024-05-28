@@ -94,6 +94,135 @@ def research_model(model_class: ResearchModel):
                     st.rerun()
 
 
+def home_screen():
+    if st.button('Create New Research Application Form', type='primary'):
+        create_or_update_session(States.CREATE_RESEARCH, updated_value=True)
+        st.rerun()
+    all_research = database.get_research()
+    if len(all_research) != 0:
+        st.header('My Research')
+        for research in all_research:
+            research_model(research)
+
+
+title = None
+description = None
+model = None
+
+
+def create_application_screen():
+    global title, description, model
+    with st.container(border=True):
+        is_edit = create_or_update_session(States.UPDATE_RESEARCH) and \
+                  create_or_update_session(States.UPDATE_RESEARCH) is not None
+        dead_line_time_stamp = None
+        st.header('Create New Research Application Form')
+        title = st.text_input('Title',
+                              value=create_or_update_session(States.UPDATE_RESEARCH).title if is_edit else None)
+        description = st.text_area('Description',
+                                   value=create_or_update_session(
+                                       States.UPDATE_RESEARCH).description if is_edit else None)
+        if st.checkbox('Add Deadline', key='add_deadline'):
+            dead_line = st.date_input('Deadline')
+            dead_line_time_stamp = int(
+                dt.datetime.combine(dead_line, dt.datetime.min.time()).timestamp() * 1000)
+        st.write('Note: Leave the deadline empty if there is no deadline')
+        if is_edit:
+            selected_tag: List[TagModel] = create_or_update_session(States.UPDATE_RESEARCH).tagsToList
+    with st.expander('Tags', expanded=create_or_update_session(States.UPDATE_RESEARCH) is not None):
+        tags = database.get_tags()
+        if len(tags) != 0:
+            checkbox_states = {tag.name: st.checkbox(tag.name, key=tag.name,
+                                                     value=tag in selected_tag if is_edit else False) for tag
+                               in tags}
+        get_selected_tags = [tag for tag in tags if checkbox_states[tag.name]]
+        with st.popover('Create New Tag', use_container_width=True):
+            name = st.text_input("Tag name", key='tag_name')
+        if st.button('Done', type='primary', key='done'):
+            try:
+                database.add_tag(
+                    TagModel(
+                        name=name,
+                    )
+                )
+                st.success('Tag created successfully')
+                st.rerun()
+            except Exception as e:
+                st.error(f'An unexpected error occurred: {str(e)}')
+    with st.expander('Questions', expanded=create_or_update_session(States.UPDATE_RESEARCH) is not None):
+        question_list: list[str] = create_or_update_session(States.QUESTION_LIST, init_value=[])
+        if is_edit:
+            create_or_update_session(
+                States.QUESTION_LIST,
+                updated_value=json_to_list(create_or_update_session(States.UPDATE_RESEARCH).questions)
+            )
+            question_list = create_or_update_session(States.QUESTION_LIST)
+
+        question = st.text_area('Question')
+        for q in question_list:
+            write, delete = st.columns([4, 1])
+            with write:
+                st.write(q)
+            with delete:
+                if st.button('Delete', key=q):
+                    question_list.remove(q)
+                    st.rerun()
+        if st.button('Add Question', type='primary'):
+            if question == '':
+                st.error('Question cannot be empty')
+                st.stop()
+            if check_item_is_present(question_list, question):
+                st.error('Question already exists')
+                st.stop()
+            question_list.append(question)
+            create_or_update_session(States.QUESTION_LIST, updated_value=question_list)
+            st.rerun()
+    col1, col2 = st.columns(2)
+    with col2:
+        if st.button('Back', type='primary', use_container_width=True):
+            create_or_update_session(States.CREATE_RESEARCH, updated_value=False)
+            create_or_update_session(States.QUESTION_LIST, updated_value=[])
+            reset_to_none(States.UPDATE_RESEARCH)
+            st.rerun()
+    with col1:
+        if st.button('Submit', type='primary', use_container_width=True):
+            if title == '':
+                st.error('Title cannot be empty')
+                st.stop()
+            if description == '':
+                st.error('Description cannot be empty')
+                st.stop()
+            if len(get_selected_tags) == 0:
+                st.error('Please select at least one tag')
+                st.stop()
+            if len(question_list) == 0:
+                st.error('Please add at least one question')
+                st.stop()
+            try:
+                model = ResearchModel(
+                    title=title,
+                    description=description,
+                    created_by=userModel.name,
+                    created_by_UID=userModel.uid,
+                    tags=str([tag.__dict__ for tag in get_selected_tags]),
+                    dead_line=dead_line_time_stamp if dead_line_time_stamp else None,
+                    key=create_or_update_session(States.UPDATE_RESEARCH).key if is_edit else None,
+                    questions=list_to_json(question_list)
+                )
+                if is_edit:
+                    database.update_research(model)
+                else:
+                    database.add_new_research(
+                        research=model
+                    )
+                create_or_update_session(States.CREATE_RESEARCH, updated_value=False)
+                reset_to_none(States.UPDATE_RESEARCH)
+                create_or_update_session(States.QUESTION_LIST, updated_value=[])
+                st.rerun()
+            except Exception as e:
+                st.error(f'An unexpected error occurred: {str(e)}')
+
+
 if create_or_update_session(States.User.value) is None:
     log_in_screen()
 else:
@@ -104,123 +233,7 @@ else:
         st.write(f'Welcome {userModel.name}')
         side_bar()
         if not create_or_update_session(States.CREATE_RESEARCH):
-            if st.button('Create New Research Application Form', type='primary'):
-                create_or_update_session(States.CREATE_RESEARCH, updated_value=True)
-                st.rerun()
-            all_research = database.get_research()
-            if len(all_research) != 0:
-                st.header('My Research')
-                for research in all_research:
-                    research_model(research)
+            home_screen()
 
         else:
-            with st.container(border=True):
-                isEdit = create_or_update_session(States.UPDATE_RESEARCH) and \
-                         create_or_update_session(States.UPDATE_RESEARCH) is not None
-                dead_line_time_stamp = None
-                st.header('Create New Research Application Form')
-                title = st.text_input('Title',
-                                      value=create_or_update_session(States.UPDATE_RESEARCH).title if isEdit else None)
-                description = st.text_area('Description',
-                                           value=create_or_update_session(
-                                               States.UPDATE_RESEARCH).description if isEdit else None)
-                if st.checkbox('Add Deadline', key='add_deadline'):
-                    dead_line = st.date_input('Deadline')
-                    dead_line_time_stamp = int(
-                        dt.datetime.combine(dead_line, dt.datetime.min.time()).timestamp() * 1000)
-                st.write('Note: Leave the deadline empty if there is no deadline')
-                if isEdit:
-                    selectedTag: List[TagModel] = create_or_update_session(States.UPDATE_RESEARCH).tagsToList
-            with st.expander('Tags',expanded=create_or_update_session(States.UPDATE_RESEARCH) is not None):
-                tags = database.get_tags()
-                if len(tags) != 0:
-                    checkbox_states = {tag.name: st.checkbox(tag.name, key=tag.name,
-                                                             value=tag in selectedTag if isEdit else False) for tag
-                                       in tags}
-                getSelectedTags = [tag for tag in tags if checkbox_states[tag.name]]
-                with st.popover('Create New Tag', use_container_width=True):
-                    name = st.text_input("Tag name", key='tag_name')
-                if st.button('Done', type='primary', key='done'):
-                    try:
-                        database.add_tag(
-                            TagModel(
-                                name=name,
-                            )
-                        )
-                        st.success('Tag created successfully')
-                        st.rerun()
-                    except Exception as e:
-                        st.error(f'An unexpected error occurred: {str(e)}')
-
-            with st.expander('Questions', expanded=create_or_update_session(States.UPDATE_RESEARCH) is not None):
-                question_list: list[str] = create_or_update_session(States.QUESTION_LIST, init_value=[])
-                if isEdit:
-                    create_or_update_session(
-                        States.QUESTION_LIST,
-                        updated_value=json_to_list(create_or_update_session(States.UPDATE_RESEARCH).questions)
-                    )
-                    question_list = create_or_update_session(States.QUESTION_LIST)
-
-                question = st.text_area('Question')
-                for q in question_list:
-                    write, delete = st.columns([4, 1])
-                    with write:
-                        st.write(q)
-                    with delete:
-                        if st.button('Delete', key=q):
-                            question_list.remove(q)
-                            st.rerun()
-                if st.button('Add Question', type='primary'):
-                    if question == '':
-                        st.error('Question cannot be empty')
-                        st.stop()
-                    if check_item_is_present(question_list, question):
-                        st.error('Question already exists')
-                        st.stop()
-                    question_list.append(question)
-                    create_or_update_session(States.QUESTION_LIST, updated_value=question_list)
-                    st.rerun()
-            col1, col2 = st.columns(2)
-            with col2:
-                if st.button('Back', type='primary', use_container_width=True):
-                    create_or_update_session(States.CREATE_RESEARCH, updated_value=False)
-                    create_or_update_session(States.QUESTION_LIST, updated_value=[])
-                    reset_to_none(States.UPDATE_RESEARCH)
-                    st.rerun()
-            with col1:
-                if st.button('Submit', type='primary', use_container_width=True):
-                    if title == '':
-                        st.error('Title cannot be empty')
-                        st.stop()
-                    if description == '':
-                        st.error('Description cannot be empty')
-                        st.stop()
-                    if len(getSelectedTags) == 0:
-                        st.error('Please select at least one tag')
-                        st.stop()
-                    if len(question_list) == 0:
-                        st.error('Please add at least one question')
-                        st.stop()
-                    try:
-                        model = ResearchModel(
-                            title=title,
-                            description=description,
-                            created_by=userModel.name,
-                            created_by_UID=userModel.uid,
-                            tags=str([tag.__dict__ for tag in getSelectedTags]),
-                            dead_line=dead_line_time_stamp if dead_line_time_stamp else None,
-                            key=create_or_update_session(States.UPDATE_RESEARCH).key if isEdit else None,
-                            questions=list_to_json(question_list)
-                        )
-                        if isEdit:
-                            database.update_research(model)
-                        else:
-                            database.add_new_research(
-                                research=model
-                            )
-                        create_or_update_session(States.CREATE_RESEARCH, updated_value=False)
-                        reset_to_none(States.UPDATE_RESEARCH)
-                        create_or_update_session(States.QUESTION_LIST, updated_value=[])
-                        st.rerun()
-                    except Exception as e:
-                        st.error(f'An unexpected error occurred: {str(e)}')
+            create_application_screen()
