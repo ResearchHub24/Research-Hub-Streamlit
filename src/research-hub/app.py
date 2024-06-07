@@ -146,17 +146,17 @@ def create_application_screen():
         get_selected_tags = [tag for tag in tags if checkbox_states[tag.name]]
         with st.popover('Create New Tag', use_container_width=True):
             name = st.text_input("Tag name", key='tag_name')
-        if st.button('Done', type='primary', key='done'):
-            try:
-                database.add_tag(
-                    TagModel(
-                        name=name,
+            if st.button('Done', type='primary', key='done'):
+                try:
+                    database.add_tag(
+                        TagModel(
+                            name=name,
+                        )
                     )
-                )
-                st.success('Tag created successfully')
-                st.rerun()
-            except Exception as e:
-                st.error(f'An unexpected error occurred: {str(e)}')
+                    st.success('Tag created successfully')
+                    st.rerun()
+                except Exception as e:
+                    st.error(f'An unexpected error occurred: {str(e)}')
     with st.expander('Questions', expanded=create_or_update_session(States.UPDATE_RESEARCH) is not None):
         question_list: list[str] = create_or_update_session(States.QUESTION_LIST, init_value=json_to_list(
             create_or_update_session(States.UPDATE_RESEARCH).questions) if is_edit else []

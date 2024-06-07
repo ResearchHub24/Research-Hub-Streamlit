@@ -17,3 +17,5 @@ class UserModel:
     photoUrl: str = None
     userType: str = UserType.STUDENTS.name
     created: float = time.time()
+    links: str = ""
+    verified: bool = False
